@@ -1,20 +1,23 @@
 const $btnKick = document.getElementById("btn-kick");
 const $btnSpecialKick = document.getElementById("btn-special-kick");
+const $logs = document.getElementById("logs");
 
 const renderHPLife = function() {
-    this.elHP.innerText = this.damageHP + ' / ' + this.defaultHP;
+    const { elHP, damageHP, defaultHP } = this;
+    elHP.innerText = damageHP + ' / ' + defaultHP;
 };
 
 const renderProgressbarHP = function() {
-    const percent = (this.damageHP / this.defaultHP) * 100;
-    this.elProgressbar.style.width = percent + '%';
+    const { damageHP, defaultHP, elProgressbar } = this;
+    const percent = (damageHP / defaultHP) * 100;
+    elProgressbar.style.width = percent + '%';
 
-    this.elProgressbar.classList.remove('low', 'critical');
+    elProgressbar.classList.remove('low', 'critical');
 
     if (percent < 60 && percent > 20) {
-        this.elProgressbar.classList.add('low');
+        elProgressbar.classList.add('low');
     } else if (percent <= 20) {
-        this.elProgressbar.classList.add('critical');
+        elProgressbar.classList.add('critical');
     }
 };
 
@@ -26,9 +29,13 @@ const renderHP = function() {
 const changeHP = function(count) {
     this.damageHP -= count;
 
-    if (this.damageHP <= 0) {
+    const { name } = this;
+    let currentHP = this.damageHP;
+
+    if (currentHP <= 0) {
+        currentHP = 0;
         this.damageHP = 0;
-        alert('Бідний ' + this.name + ' програв бій!');
+        alert('Бідний ' + name + ' програв бій!');
 
         if (this === character) {
             $btnKick.disabled = true;
@@ -79,6 +86,23 @@ const enemy2 = {
     changeHP: changeHP,
 };
 
+function generateLog(attacker, defender, damage) {
+    const { name: attackerName } = attacker;
+    const { name: defenderName, damageHP, defaultHP } = defender;
+
+    const logString = logs[random(logs.length) - 1];
+
+    const text = logString.replace('[ПЕРСОНАЖ №1]', attackerName)
+        .replace('[ПЕРСОНАЖ №2]', defenderName);
+
+    return `<p>${text}. <b>-${damage}</b> HP. [${damageHP}/${defaultHP}]</p>`;
+}
+
+function displayLog(logEntry) {
+    $logs.insertAdjacentHTML('afterbegin', logEntry);
+}
+
+
 function init() {
     console.log('Start Game!');
     character.renderHP();
@@ -90,27 +114,48 @@ function random(num) {
     return Math.ceil(Math.random() * num);
 }
 
-// Проверка на то убиты ли два врага
 function checkAllEnemiesDefeated() {
-    if (enemy1.damageHP <= 0 && enemy2.damageHP <= 0) {
-        alert(character.name + ' переміг усіх!');
+    const { damageHP: enemy1HP } = enemy1;
+    const { damageHP: enemy2HP } = enemy2;
+    const { name: characterName } = character;
+
+    if (enemy1HP <= 0 && enemy2HP <= 0) {
+        alert(characterName + ' переміг усіх!');
         $btnKick.disabled = true;
         $btnSpecialKick.disabled = true;
     }
 }
 
-// Обработчик раудна боя
 function handleAttack(playerDamageMax) {
-    if (enemy1.damageHP > 0) {
-        character.changeHP(random(15));
-    }
-    if (enemy2.damageHP > 0) {
-        character.changeHP(random(15));
+    const { damageHP: enemy1HP_before } = enemy1;
+    const { damageHP: enemy2HP_before } = enemy2;
+
+    if (enemy1HP_before > 0) {
+        const damage = random(15);
+        character.changeHP(damage);
+        displayLog(generateLog(enemy1, character, damage));
     }
 
-    if (character.damageHP > 0) {
-        enemy1.changeHP(random(playerDamageMax));
-        enemy2.changeHP(random(playerDamageMax));
+    if (enemy2HP_before > 0 && character.damageHP > 0) {
+        const damage = random(15);
+        character.changeHP(damage);
+        displayLog(generateLog(enemy2, character, damage));
+    }
+
+    const { damageHP: charHP_after } = character;
+    if (charHP_after > 0) {
+
+        if (enemy1HP_before > 0) {
+            const damage = random(playerDamageMax);
+            enemy1.changeHP(damage);
+            displayLog(generateLog(character, enemy1, damage));
+        }
+
+        if (enemy2HP_before > 0) {
+            const damage = random(playerDamageMax);
+            enemy2.changeHP(damage);
+            displayLog(generateLog(character, enemy2, damage));
+        }
     }
 }
 
